@@ -29,6 +29,8 @@
 #include <image_geometry/pinhole_camera_model.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -118,6 +120,8 @@ Eigen::Matrix3f covariance(pcl::PointCloud<pcl::PointXYZ>::Ptr cumulative_cloud,
 
 void imageCallback(const sensor_msgs::ImageConstPtr &msg,
                    const sensor_msgs::CameraInfoConstPtr &left_info) {
+      ROS_WARN(
+          "CALLBACK");
   frames_proc_++;
 
   cv_bridge::CvImageConstPtr cv_img_ptr;
@@ -559,8 +563,10 @@ int main(int argc, char **argv) {
   message_filters::Subscriber<sensor_msgs::CameraInfo> cinfo_sub(
       nh_, cinfo_topic, 1);
 
-  message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::CameraInfo>
-      sync(image_sub, cinfo_sub, 10);
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo> MySyncPolicy;
+  message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), image_sub, cinfo_sub);
+  
+  //message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::CameraInfo>      sync(image_sub, cinfo_sub, 10);
   sync.registerCallback(boost::bind(&imageCallback, _1, _2));
 
   // ROS param callback
